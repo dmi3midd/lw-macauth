@@ -11,14 +11,14 @@ import (
 
 type Server struct {
 	cfg          *config.Config
-	tokenService *services.TokenService
+	tokenService services.TokenService
 }
 
 func NewServer(cfg *config.Config) *http.Server {
 	tokenService := services.NewTokenService(cfg.Keys)
 	s := &Server{
 		cfg:          cfg,
-		tokenService: &tokenService,
+		tokenService: tokenService,
 	}
 
 	router := s.RegisterRoutes()
