@@ -21,14 +21,17 @@ var (
 
 type TokenService interface {
 	// GenerateTokens generates pair with access and refresh tokens.
-	GenerateTokens(user *models.UserDto, serviceId string) (*models.TokensPair, error)
-	// ValidateRefreshToken validates refresh token and returns token and user id (tokenId, userId, error).
+	// It returns tokens pair, tokenId (tokensPair, tokenId, error).
+	GenerateTokens(user *models.UserDto, serviceId string) (*models.TokensPair, string, error)
+	// ValidateRefreshToken validates refresh token.
+	// It returns tokenId and userId (tokenId, userId, error).
 	// It returns ("", "", error) if validation go wrong.
 	// It returns ErrUnexpectedSigningMethod if the token uses an unexpected signing method.
 	// It returns ErrInvalidRefreshToken if the token is invalid.
 	// It returns ErrSubjectAndIDNotFound if subject or token ID are not found in claims.
 	ValidateRefreshToken(refreshToken string) (string, string, error)
-	// ValidateAccessToken validates access token and returns userDto and token id (userDto, tokenId, error).
+	// ValidateAccessToken validates access token.
+	// It returns userDto and tokenId (userDto, tokenId, error).
 	// It returns (nil, "", error) if validation go wrong.
 	// It returns ErrUnexpectedSigningMethod if the token uses an unexpected signing method.
 	// It returns ErrInvalidAccessToken if the token is invalid.
@@ -48,7 +51,7 @@ func NewTokenService(keys *config.KeysPair) TokenService {
 	}
 }
 
-func (s *tokenService) GenerateTokens(user *models.UserDto, serviceId string) (*models.TokensPair, error) {
+func (s *tokenService) GenerateTokens(user *models.UserDto, serviceId string) (*models.TokensPair, string, error) {
 	op := "tokenService.GenerateTokens"
 	accessExpiry, _ := time.ParseDuration("30m")
 	refreshExpiry, _ := time.ParseDuration("336h")
@@ -71,7 +74,7 @@ func (s *tokenService) GenerateTokens(user *models.UserDto, serviceId string) (*
 	}
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims).SignedString(s.keys.PrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	// Refresh token
@@ -86,14 +89,13 @@ func (s *tokenService) GenerateTokens(user *models.UserDto, serviceId string) (*
 	}
 	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims).SignedString(s.keys.PrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return &models.TokensPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		TokenId:      id,
-	}, nil
+	}, id, nil
 }
 
 func (s *tokenService) ValidateRefreshToken(refreshToken string) (string, string, error) {
