@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+storage/
+config.yaml
+macauth
+setup.sh
+README.md
+CHANGELOG.md
+assets/
+docker-compose.yaml

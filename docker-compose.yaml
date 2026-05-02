@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  lw-macauth:
+    build: .
+    container_name: lw-macauth
+    restart: unless-stopped
+    ports:
+      - "2700:2700"
+    env_file:
+      - .env
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./storage:/app/storage
