@@ -22,10 +22,10 @@ func (s *Server) RegisterRoutes() *chi.Mux {
 		MaxAge:           300,
 	}))
 
-	r.Post("/v1/generate", errs.ErrorHandler(s.GenerateTokens))
-	r.Get("/v1/validate/access", errs.ErrorHandler(s.ValidateAccessToken))
-	r.Post("/v1/validate/refresh", errs.ErrorHandler(s.ValidateRefreshToken))
-	r.Get("/v1/public", errs.ErrorHandler(s.GetPublicKey))
+	r.Post("/generate", errs.ErrorHandler(s.GenerateTokens))
+	r.Get("/validate/access", errs.ErrorHandler(s.ValidateAccessToken))
+	r.Post("/validate/refresh", errs.ErrorHandler(s.ValidateRefreshToken))
+	r.Get("/public", errs.ErrorHandler(s.GetPublicKey))
 
 	return r
 }
