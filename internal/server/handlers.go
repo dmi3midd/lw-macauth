@@ -3,16 +3,34 @@ package server
 import (
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
-	errs "lw-macauth/internal/errors"
-	"lw-macauth/internal/models"
+	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/dmi3midd/lw-macauth/internal/models"
+	"github.com/dmi3midd/lw-macauth/internal/shared/apierror"
+	"github.com/dmi3midd/lw-macauth/internal/shared/utils"
 )
 
 type GenerateTokensRequest struct {
 	User      models.UserDto `json:"user"`
 	ServiceId string         `json:"serviceId"`
+}
+
+func (r GenerateTokensRequest) Validate() error {
+	if strings.TrimSpace(r.ServiceId) == "" {
+		return errors.New("serviceId is required")
+	}
+	if strings.TrimSpace(r.User.UserId) == "" {
+		return errors.New("user.userId is required")
+	}
+	if strings.TrimSpace(r.User.Username) == "" {
+		return errors.New("user.username is required")
+	}
+	if strings.TrimSpace(r.User.Email) == "" {
+		return errors.New("user.email is required")
+	}
+	return nil
 }
 
 type GenerateTokensResponse struct {
@@ -21,22 +39,30 @@ type GenerateTokensResponse struct {
 }
 
 func (s *Server) GenerateTokens(w http.ResponseWriter, r *http.Request) error {
-	var req GenerateTokensRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return errs.NewBadRequestError(err, "Invalid request body")
+	req, err := utils.BindAndValidate[GenerateTokensRequest](r)
+	if err != nil {
+		return err
 	}
 
 	tokensPair, tokenId, err := s.tokenService.GenerateTokens(&req.User, req.ServiceId)
 	if err != nil {
-		return errs.NewInternalServerError(err)
+		return err
 	}
 
-	response := GenerateTokensResponse{
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(GenerateTokensResponse{
 		Tokens:  *tokensPair,
 		TokenId: tokenId,
-	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return errs.NewInternalServerError(err)
+	})
+}
+
+type ValidateAccessTokenRequest struct {
+	AccessToken string `json:"accessToken"`
+}
+
+func (r ValidateAccessTokenRequest) Validate() error {
+	if strings.TrimSpace(r.AccessToken) == "" {
+		return errors.New("accessToken is required")
 	}
 	return nil
 }
@@ -46,34 +72,31 @@ type ValidateAccessTokenResponse struct {
 }
 
 func (s *Server) ValidateAccessToken(w http.ResponseWriter, r *http.Request) error {
-	authHeader := r.Header.Get("Authorization")
-	token := ""
-	if after, ok := strings.CutPrefix(authHeader, "Bearer "); ok {
-		token = after
-	}
-	if token == "" {
-		return errs.NewUnauthorizedError(
-			fmt.Errorf("Invalid or empty Authorization header"),
-			"Invalid or empty Authorization header",
-		)
-	}
-	userData, _, err := s.tokenService.ValidateAccessToken(token)
+	req, err := utils.BindAndValidate[ValidateAccessTokenRequest](r)
 	if err != nil {
-		return errs.NewUnauthorizedError(err, "Invalid access token")
+		return err
+	}
+
+	userData, _, err := s.tokenService.ValidateAccessToken(req.AccessToken)
+	if err != nil {
+		return apierror.NewUnauthorizedError(err, "Invalid access token")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	response := ValidateAccessTokenResponse{
+	return json.NewEncoder(w).Encode(ValidateAccessTokenResponse{
 		User: *userData,
-	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return errs.NewInternalServerError(err)
-	}
-	return nil
+	})
 }
 
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken"`
+}
+
+func (r RefreshTokenRequest) Validate() error {
+	if strings.TrimSpace(r.RefreshToken) == "" {
+		return errors.New("refreshToken is required")
+	}
+	return nil
 }
 
 type RefreshTokenResponse struct {
@@ -82,32 +105,21 @@ type RefreshTokenResponse struct {
 }
 
 func (s *Server) ValidateRefreshToken(w http.ResponseWriter, r *http.Request) error {
-	var req RefreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return errs.NewBadRequestError(err, "Invalid request body")
-	}
-	refreshToken := req.RefreshToken
-	if refreshToken == "" {
-		return errs.NewUnauthorizedError(
-			fmt.Errorf("Invalid or empty refresh token"),
-			"Invalid or empty refresh token",
-		)
-	}
-	tokenId, userId, err := s.tokenService.ValidateRefreshToken(refreshToken)
+	req, err := utils.BindAndValidate[RefreshTokenRequest](r)
 	if err != nil {
-		return errs.NewUnauthorizedError(err, "Invalid refresh token")
+		return err
 	}
 
-	response := RefreshTokenResponse{
-		UserId:  userId,
-		TokenId: tokenId,
+	tokenId, userId, err := s.tokenService.ValidateRefreshToken(req.RefreshToken)
+	if err != nil {
+		return apierror.NewUnauthorizedError(err, "Invalid refresh token")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return errs.NewInternalServerError(err)
-	}
-	return nil
+	return json.NewEncoder(w).Encode(RefreshTokenResponse{
+		UserId:  userId,
+		TokenId: tokenId,
+	})
 }
 
 type GetPublicKeyResponse struct {
@@ -118,11 +130,7 @@ func (s *Server) GetPublicKey(w http.ResponseWriter, r *http.Request) error {
 	key := s.tokenService.GetPublicKey()
 
 	w.Header().Set("Content-Type", "application/json")
-	response := GetPublicKeyResponse{
+	return json.NewEncoder(w).Encode(GetPublicKeyResponse{
 		Key: key,
-	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return errs.NewInternalServerError(err)
-	}
-	return nil
+	})
 }

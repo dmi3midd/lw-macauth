@@ -9,7 +9,7 @@ if [ ! -f config.yaml ]; then
     if [ -f config.example.yaml ]; then
         cp config.example.yaml config.yaml
     else
-        echo -e "There is no example file. Check GitHub repository: https://github.com/dmi3midd/macauth"
+        echo -e "There is no example file. Check GitHub repository: https://github.com/dmi3midd/lw-macauth"
     fi
 fi
 
@@ -18,12 +18,6 @@ if [ ! -f storage/keys/private.pem ] || [ ! -f storage/keys/public.pem ]; then
     echo -e "Waiting for RSA keys..."
     openssl genpkey -algorithm RSA -out storage/keys/private.pem -pkeyopt rsa_keygen_bits:2048 2>/dev/null
     openssl rsa -pubout -in storage/keys/private.pem -out storage/keys/public.pem 2>/dev/null
-fi
-
-# 4. Log files
-if [ ! -f storage/macauth.db ]; then
-    echo -e "Waiting for log files..."
-    touch storage/lw-macauth.log
 fi
 
 echo -e "Initialization is completed."

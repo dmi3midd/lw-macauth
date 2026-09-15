@@ -1,25 +1,33 @@
 package logger
 
 import (
-	"io"
 	"log/slog"
 	"os"
+	"strings"
 )
 
-func Setup(logPath string) (*os.File, error) {
-	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
+// Setup configures the default slog logger to write JSON logs to stdout with the specified log level.
+func Setup(levelStr string) {
+	level := ParseLevel(levelStr)
 
-	multiWriter := io.MultiWriter(os.Stdout, file)
-
-	handler := slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
 	})
 
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
+}
 
-	return file, nil
+// ParseLevel converts a level string into a slog.Level.
+func ParseLevel(levelStr string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(levelStr)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }

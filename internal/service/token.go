@@ -1,12 +1,13 @@
-package services
+package service
 
 import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"lw-macauth/internal/config"
-	"lw-macauth/internal/models"
 	"time"
+
+	"github.com/dmi3midd/lw-macauth/internal/config"
+	"github.com/dmi3midd/lw-macauth/internal/models"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/xid"

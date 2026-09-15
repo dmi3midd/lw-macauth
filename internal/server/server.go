@@ -5,17 +5,17 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
-	"lw-macauth/internal/config"
-	"lw-macauth/internal/services"
+	"github.com/dmi3midd/lw-macauth/internal/config"
+	"github.com/dmi3midd/lw-macauth/internal/service"
 )
 
 type Server struct {
 	cfg          *config.Config
-	tokenService services.TokenService
+	tokenService service.TokenService
 }
 
 func NewServer(cfg *config.Config) *http.Server {
-	tokenService := services.NewTokenService(cfg.Keys)
+	tokenService := service.NewTokenService(cfg.Keys)
 	s := &Server{
 		cfg:          cfg,
 		tokenService: tokenService,

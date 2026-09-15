@@ -7,44 +7,46 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/spf13/viper"
+	"go.yaml.in/yaml/v3"
 )
 
-type HTTPServer struct {
-	Address      string        `mapstructure:"address"`
-	IdleTimeout  time.Duration `mapstructure:"idleTimeout"`
-	ReadTimeout  time.Duration `mapstructure:"readTimeout"`
-	WriteTimeout time.Duration `mapstructure:"writeTimeout"`
+type Server struct {
+	Address      string        `yaml:"address"`
+	IdleTimeout  time.Duration `yaml:"idleTimeout"`
+	ReadTimeout  time.Duration `yaml:"readTimeout"`
+	WriteTimeout time.Duration `yaml:"writeTimeout"`
 }
 
 type PEM struct {
-	PrivPath string `mapstructure:"privPath"`
-	PubPath  string `mapstructure:"pubPath"`
+	PrivPath string `yaml:"privPath"`
+	PubPath  string `yaml:"pubPath"`
 }
 
 type Log struct {
-	LogPath string `mapstructure:"logPath"`
+	Level string `yaml:"level"`
 }
 
 type Config struct {
-	HTTPServer `mapstructure:"httpServer"`
-	PEM        `mapstructure:"pem"`
-	Log        `mapstructure:"log"`
-	Keys       *KeysPair `mapstructure:"-"`
+	HTTPServer Server    `yaml:"server"`
+	PEM        PEM       `yaml:"pem"`
+	Log        Log       `yaml:"log"`
+	Keys       *KeysPair `yaml:"-"`
 }
 
 func LoadConfig() (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config: %w", err)
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "./config.yaml"
 	}
 
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config into struct: %w", err)
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	cfg := &Config{}
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
 	}
 
 	keys, err := LoadKeys(cfg.PEM.PrivPath, cfg.PEM.PubPath)
@@ -53,7 +55,7 @@ func LoadConfig() (*Config, error) {
 	}
 	cfg.Keys = keys
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 type KeysPair struct {
@@ -81,8 +83,6 @@ func LoadKeys(privPath, pubPath string) (*KeysPair, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key: %w", err)
 	}
-
-	// log.Printf("Keys to string:\n%v", string(pubKeyData))
 
 	return &KeysPair{
 		PrivateKey: privateKey,

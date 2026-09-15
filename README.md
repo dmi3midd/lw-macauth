@@ -62,11 +62,15 @@ Generates a new access and refresh token pair for a user.
 ```
 
 ### 2. Validate Access Token
-`GET /validate/access`
+`POST /validate/access`
 Validates an existing access token and returns the user information.
 
-**Headers:**
-- `Authorization: Bearer <access_token>`
+**Request Body:**
+```json
+{
+  "accessToken": "string"
+}
+```
 
 **Response:**
 ```json
